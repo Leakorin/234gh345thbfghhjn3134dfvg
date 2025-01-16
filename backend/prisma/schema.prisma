@@ -1,0 +1,76 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model UserData {
+  tgId               Float          @id
+  balance            Float           @default(0.0)
+  bchAddress         String?
+  datetimeRegistered DateTime        @default(now())
+  referrals          Referral[]      @relation("ReferralsMade") // Referrals the user has made
+  referralsReceived   Referral[]      @relation("ReferralsReceived") // Referrals the user has received
+  balanceArchives    BalanceArchive[] @relation("UserBalanceArchives")
+  completedTasks     CompletedTask[] @relation("UserCompletedTasks")
+}
+
+model Referral {
+  id          Int      @id @default(autoincrement())
+  referrerId  Float
+  referralId  Float
+
+  referrer    UserData @relation("ReferralsMade", fields: [referrerId], references: [tgId]) // Referrer side
+  referral    UserData @relation("ReferralsReceived", fields: [referralId], references: [tgId]) // Referral side
+}
+
+
+model BlockchainBlock {
+  id           Int                    @id @default(autoincrement())
+  blockHash    String                 @unique
+  totalGas     Float                  @default(0.0)
+  revenueNoder Float                  @default(0.0)
+  datetime     DateTime               @default(now())
+  transactions BlockchainTransaction[]
+}
+
+model BlockchainTransaction {
+  id        Int             @id @default(autoincrement())
+  blockHash String
+  txHash    String          @unique
+  author    String
+  receiver  String
+  amount    Float           @default(0.0)
+  gas       Float           @default(0.0)
+  revenue   Float           @default(0.0)
+
+  block     BlockchainBlock @relation(fields: [blockHash], references: [blockHash])
+}
+
+model BalanceArchive {
+  id       Int      @id @default(autoincrement())
+  tgId     Float
+  balance  Float    @default(0.0)
+  datetime DateTime @default(now())
+
+  user     UserData @relation("UserBalanceArchives", fields: [tgId], references: [tgId])
+}
+
+model Task {
+  id              Int            @id @default(autoincrement())
+  taskName        String
+  taskDescription String
+  completedTasks  CompletedTask[]
+}
+
+model CompletedTask {
+  id     Int      @id @default(autoincrement())
+  tgId   Float
+  taskId Int
+
+  user   UserData @relation("UserCompletedTasks", fields: [tgId], references: [tgId])
+  task   Task     @relation(fields: [taskId], references: [id])
+}
